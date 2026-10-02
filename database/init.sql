@@ -47,8 +47,8 @@ INSERT INTO users (id, email, password, full_name, avatar_url) VALUES
 (2, 'hoangnam.le@gmail.com', '123456', 'Lê Hoàng Nam', 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=120&h=120&fit=crop'),
 (3, 'minhanh.tran@gmail.com', '123456', 'Trần Minh Anh', 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=120&h=120&fit=crop');
 
--- Khởi tạo một số tin nhắn chat mẫu ban đầu
+-- Khởi tạo tin nhắn chat mẫu ban đầu
 INSERT INTO messages (room_id, user_id, content, created_at) VALUES
-(1, 1, 'Chào cả nhóm! Mình vừa chuyển giao diện sang kiểu Zalo Chatbox và đăng ký bằng Gmail.', NOW() - INTERVAL 25 MINUTE),
-(1, 2, 'Tuyệt vời Tuấn ơi, giao diện Zalo nhìn trực quan và dễ demo trước lớp hơn hẳn!', NOW() - INTERVAL 20 MINUTE),
-(1, 3, 'Mọi người thử mở 2 tab ẩn danh đăng nhập 2 Gmail khác nhau để chat qua lại xem tin nhắn lưu vào MySQL nhé!', NOW() - INTERVAL 10 MINUTE);
+(1, 1, 'Chào cả nhóm! Ứng dụng GreenChat giao diện màu xanh lá cây đã chạy mượt mà trên Ubuntu.', NOW() - INTERVAL 25 MINUTE),
+(1, 2, 'Tone màu xanh lá cây mát mắt và hiện đại ghê, không lo bị dính bản quyền nữa nhé!', NOW() - INTERVAL 20 MINUTE),
+(1, 3, 'Tài khoản đăng nhập bằng Gmail lưu vào MySQL cực kỳ ổn định. Chuẩn bị qua bước CI/CD thôi.', NOW() - INTERVAL 10 MINUTE);
