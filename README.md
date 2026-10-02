@@ -6,7 +6,7 @@
 
 ## 1. TỔNG QUAN HỆ THỐNG & KIẾN TRÚC
 
-Hệ thống triển khai một ứng dụng mạng xã hội thu nhỏ (**Pulse Social Platform**) theo mô hình Microservices/Containerized, kết hợp luồng tự động hóa tích hợp và triển khai liên tục (**CI/CD Pipeline**).
+Hệ thống triển khai một ứng dụng Chat nhóm nội bộ phong cách **Zalo Web (Zalo Team Chatbox)** có hệ thống đăng ký / đăng nhập bằng **Gmail**, được vận hành theo mô hình Microservices/Containerized kết hợp luồng tự động hóa tích hợp và triển khai liên tục (**CI/CD Pipeline**).
 
 ### Mô hình luồng dữ liệu (Architecture Diagram)
 
