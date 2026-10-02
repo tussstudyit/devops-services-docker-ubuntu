@@ -2,8 +2,8 @@ pipeline {
     agent any
 
     environment {
-        // Cấu hình thông tin Docker Hub (Bạn sẽ thay bằng username Docker Hub thật)
-        DOCKER_HUB_REPO = 'tussstudyit/pulse-social-app'
+        // Cấu hình thông tin Docker Hub
+        DOCKER_HUB_REPO = 'tussstudyit/greenchat-app'
         IMAGE_TAG = "${env.BUILD_NUMBER}"
         DOCKER_CREDENTIALS_ID = 'docker-hub-credentials'
     }

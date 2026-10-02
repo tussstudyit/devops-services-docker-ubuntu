@@ -81,8 +81,8 @@ Hệ thống triển khai một ứng dụng Chat nhóm nội bộ mang tên **G
 
 | Thành phần | Người phụ trách | Nhiệm vụ chính | Sản phẩm bàn giao |
 | :--- | :--- | :--- | :--- |
-| **PHẦN 1: Ứng dụng & Docker Stack** | **Thành viên A** *(Dev / Infra)* | • Thiết kế web mạng xã hội Pulse (Node.js Express + Tailwind CSS).<br>• Tạo Database MySQL và script nạp dữ liệu ban đầu (`init.sql`).<br>• Cấu hình Nginx Reverse Proxy (Port 80).<br>• Đóng gói toàn bộ với `Dockerfile` và `docker-compose.yml`. | Hệ thống chạy trơn tru cục bộ trên Ubuntu qua lệnh `docker compose up -d`, truy cập được tại `http://localhost`. |
-| **PHẦN 2: Tự động hóa CI/CD** | **Thành viên B** *(DevOps Engineer)* | • Cài đặt Jenkins Server chạy bằng Docker (mount Docker socket).<br>• Cấu hình kết nối Docker Hub và GitHub Credentials.<br>• Viết `Jenkinsfile` chuẩn Declarative Pipeline.<br>• Cấu hình Webhook để khi `git push` là hệ thống tự build & deploy. | Pipeline tự động hóa từ A-Z, không cần can thiệp thủ công bằng tay khi có code mới. |
+| **PHẦN 1: Ứng dụng & Docker Stack** | **Thành viên A: Đặng Tú Nguyên** *(Dev / Infra - `dang.2006.qt@gmail.com`)* | • Thiết kế ứng dụng GreenChat (Node.js Express + Tailwind CSS, đăng ký/đăng nhập bằng Gmail).<br>• Tạo Database MySQL với bảng `users`, `friendships`, `conversations`, `conversation_members`, `messages`.<br>• Cấu hình Nginx Reverse Proxy (Port 80) phân luồng sang App.<br>• Đóng gói toàn bộ hệ thống với `Dockerfile` và `docker-compose.yml`. | Hệ thống chạy trơn tru cục bộ trên Ubuntu qua lệnh `docker compose up -d`, truy cập được tại `http://localhost` và mạng LAN `http://172.26.92.9`. |
+| **PHẦN 2: Tự động hóa CI/CD & Mạng Ubuntu** | **Thành viên B: Nguyễn Thành Nhân** *(DevOps Engineer - `nhan@gmail.com`)* | • Cài đặt Jenkins Server chạy bằng Docker (mount Docker socket trên Ubuntu).<br>• Kiểm thử đa người dùng qua mạng nội bộ Ubuntu (kết bạn & chat giữa 2 tài khoản).<br>• Viết `Jenkinsfile` chuẩn Declarative Pipeline (Build, Push Docker Hub, Deploy).<br>• Cấu hình GitHub Webhook để tự động build & deploy khi có commit mới. | Pipeline tự động hóa CI/CD từ A-Z, hỗ trợ tương tác trực tiếp giữa các thành viên qua mạng Ubuntu. |
 
 ---
 
@@ -91,11 +91,11 @@ Hệ thống triển khai một ứng dụng Chat nhóm nội bộ mang tên **G
 ```text
 devops-project/
 ├── app/
-│   ├── server.js               # Mã nguồn ứng dụng mạng xã hội Pulse
+│   ├── server.js               # Mã nguồn ứng dụng GreenChat (Node.js Express)
 │   ├── package.json            # Khai báo dependencies (express, mysql2)
 │   └── Dockerfile              # Hướng dẫn đóng gói container ứng dụng
 ├── database/
-│   └── init.sql                # Khởi tạo bảng posts và dữ liệu mẫu (UTF-8)
+│   └── init.sql                # Khởi tạo bảng users, friendships, conversations, messages
 ├── nginx/
 │   └── default.conf            # Cấu hình Reverse Proxy chuyển tiếp cổng 80 -> 3000
 ├── docker-compose.yml          # Quản lý toàn bộ stack (Nginx + App + DB + Volume)
@@ -107,14 +107,19 @@ devops-project/
 
 ## 4. CHI TIẾT KỸ THUẬT - PHẦN 1: APPLICATION & DOCKER STACK
 
-### 4.1. Ứng dụng Pulse (Mini Social Network)
-* **Frontend:** Tối giản theo phong cách Threads/Twitter, sử dụng Tailwind CSS qua CDN, font chữ Inter hiện đại.
-* **Backend:** Node.js Express hỗ trợ CRUD:
-  * `GET /`: Hiển thị bảng tin và thông số môi trường (Hostname container, DB status, App version).
-  * `POST /posts`: Đăng bài viết mới (lưu vào MySQL).
-  * `POST /posts/like`: Tăng lượt thích trực tiếp trong DB.
-  * `POST /posts/delete`: Xóa bài viết.
-* **Chuẩn mã hóa:** Thiết lập `utf8mb4` toàn diện để hiển thị tiếng Việt chính xác.
+### 4.1. Ứng dụng GreenChat (Team Chat & Friend Management)
+* **Frontend:** Giao diện tone xanh ngọc lục bảo (Emerald Green) hiện đại, sử dụng Tailwind CSS qua CDN.
+* **Xác thực:** Đăng ký và đăng nhập bảo mật bằng **Gmail** cá nhân (`/login`, `/register`).
+* **Tính năng Bạn bè (`/friends`):**
+  * Tìm kiếm người dùng qua địa chỉ Gmail trực tiếp từ cơ sở dữ liệu MySQL.
+  * Kết bạn 2 chiều (`friendships`), hiển thị danh sách bạn bè, hủy kết bạn.
+  * Tự động khởi tạo hội thoại 1-1 khi kết bạn thành công.
+* **Tính năng Nhắn tin (`/`):**
+  * Tự động nạp cuộc trò chuyện gần nhất ngay khi truy cập.
+  * Giao diện Chat thời gian thực với cơ chế Real-time Polling 2 giây.
+  * Gửi tin nhắn văn bản, biểu cảm emoji nhanh (`👍`, `❤️`, `🌿`, `🔥`), và link hình ảnh.
+  * Hỗ trợ tạo nhóm chat mới (`/groups/create`) với nhiều thành viên.
+* **Chuẩn mã hóa:** Thiết lập `utf8mb4` toàn diện đảm bảo hiển thị tiếng Việt chính xác 100%.
 
 ### 4.2. Đóng gói Container (`app/Dockerfile`)
 ```dockerfile
@@ -173,7 +178,7 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_HUB_REPO = 'your-dockerhub-username/pulse-social-app'
+        DOCKER_HUB_REPO = 'tussstudyit/greenchat-app'
         IMAGE_TAG = "${env.BUILD_NUMBER}"
         DOCKER_CREDENTIALS_ID = 'docker-hub-credentials'
     }
@@ -240,17 +245,19 @@ docker compose ps
 * `devops_app`: Up (Port `3000/tcp`)
 * `devops_mysql`: Up (healthy)
 
-### 6.3. Truy cập ứng dụng
-Mở trình duyệt truy cập: **`http://localhost`**
+### 6.3. Truy cập ứng dụng & Tương tác nhiều thành viên
+* **Trên máy Ubuntu chính (Host):** `http://localhost`
+* **Trên máy Ubuntu thành viên khác (cùng mạng LAN/Wi-Fi):** `http://172.26.92.9`
+* Đăng nhập 2 tài khoản: `dang.2006.qt@gmail.com` và `nhan@gmail.com` để thử nghiệm tương tác gửi tin nhắn và kết bạn hai chiều.
 
 ---
 
 ## 7. KỊCH BẢN DEMO BẢO VỆ ĐỒ ÁN TRƯỚC HỘI ĐỒNG
 
-1. **Chứng minh kiến trúc Docker:**
-   * Mở trình duyệt `http://localhost` xem giao diện mạng xã hội Pulse.
-   * Thêm 1 bài viết mới và bấm thích (chứng minh kết nối MySQL hoạt động).
-   * Chạy lệnh `docker compose restart app` -> F5 lại web: Dữ liệu vẫn còn nguyên (chứng minh Docker Volume hoạt động).
+1. **Chứng minh kiến trúc Docker & Phân tách dịch vụ:**
+   * Mở trình duyệt `http://localhost` và `http://172.26.92.9` xem giao diện GreenChat.
+   * Gửi tin nhắn giữa hai tài khoản qua mạng nội bộ Ubuntu (chứng minh Nginx Reverse Proxy và Node.js hoạt động).
+   * Chạy lệnh `docker compose restart app` -> F5 lại web: Toàn bộ tin nhắn và tài khoản vẫn còn nguyên (chứng minh Named Volume `mysql_data` hoạt động bảo toàn dữ liệu).
 2. **Chứng minh tự động hóa CI/CD:**
    * Mở VS Code, sửa phiên bản trong `app/server.js` từ `const APP_VERSION = "v1.0.0";` thành `"v2.0.0"`.
    * Thực hiện:
@@ -260,4 +267,4 @@ Mở trình duyệt truy cập: **`http://localhost`**
      ```
    * Chuyển sang màn hình Jenkins: Xem pipeline tự động kích hoạt qua 4 stages.
    * Chuyển sang Docker Hub: Thấy image mới vừa được đẩy lên.
-   * Quay lại `http://localhost` và nhấn F5: Web đã tự động nhảy lên phiên bản **v2.0.0** mà các bài đăng trước đó không hề bị mất.
+   * Quay lại `http://localhost` và nhấn F5: Web đã tự động nhảy lên phiên bản **v2.0.0** mà các tài khoản và lịch sử chat trước đó không hề bị mất.
