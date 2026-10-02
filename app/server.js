@@ -428,23 +428,34 @@ app.get('/', (req, res) => {
                                     <span class="text-[10px] text-emerald-600 font-medium">${req.user.email}</span>
                                 </div>
                             </div>
-                            <button onclick="openSearchModal()" class="w-8 h-8 rounded-full bg-emerald-100/70 text-emerald-700 flex items-center justify-center text-sm hover:bg-emerald-200 transition-colors" title="Tìm kết bạn qua Gmail">
-                                🔍
+                            <button onclick="openSearchModal()" class="w-8 h-8 rounded-full bg-emerald-100/70 text-emerald-700 flex items-center justify-center text-sm hover:bg-emerald-200 transition-colors" title="Thêm bạn qua Gmail">
+                                ➕
                             </button>
                         </div>
 
                         <!-- Panel: Tin nhắn (Chats) -->
                         <div id="chats-panel" class="flex-1 flex flex-col overflow-hidden">
-                            <div class="p-3 border-b border-slate-100 flex gap-2">
-                                <button onclick="openSearchModal()" class="flex-1 bg-emerald-50/60 border border-emerald-100 text-slate-500 text-xs px-3 py-2 rounded-xl text-left hover:bg-emerald-100/50 transition-colors">
-                                    🔍 Tìm bạn qua Gmail...
-                                </button>
-                                <button onclick="openCreateGroupModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-3 py-2 rounded-xl font-bold transition-colors shadow-xs" title="Tạo nhóm mới">
+                            <!-- Ô TÌM KIẾM TRỰC TIẾP TRÊN THANH SIDEBAR (GÕ ĐƯỢC NGAY LẬP TỨC) -->
+                            <div class="p-3 border-b border-slate-100 flex items-center gap-2">
+                                <div class="relative flex-1">
+                                    <input type="text" id="sidebar-search-input" placeholder="Tìm bạn qua Gmail / Tên..." 
+                                        oninput="onSidebarSearch(this.value)"
+                                        class="w-full bg-emerald-50/60 border border-emerald-200 text-slate-800 placeholder-slate-400 text-xs pl-8 pr-7 py-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition-all">
+                                    <span class="absolute left-2.5 top-2.5 text-xs text-slate-400">🔍</span>
+                                    <button type="button" id="sidebar-search-clear" onclick="clearSidebarSearch()" class="hidden absolute right-2.5 top-2 text-slate-400 hover:text-slate-600 font-bold text-xs">&times;</button>
+                                </div>
+                                <button onclick="openCreateGroupModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-2.5 py-2 rounded-xl font-bold transition-colors shadow-xs" title="Tạo nhóm mới">
                                     + Nhóm
                                 </button>
                             </div>
 
-                            <div class="flex-1 overflow-y-auto p-2 space-y-1">
+                            <!-- Vùng kết quả tìm kiếm ngay trên sidebar (khi gõ) -->
+                            <div id="sidebar-search-results" class="hidden p-2 space-y-1 overflow-y-auto bg-emerald-50/20 border-b border-emerald-100 max-h-60">
+                                <!-- Kết quả render ở đây -->
+                            </div>
+
+                            <!-- Danh sách cuộc trò chuyện thông thường -->
+                            <div id="conversations-list" class="flex-1 overflow-y-auto p-2 space-y-1">
                                 ${conversations && conversations.length > 0 ? conversations.map(c => {
                                     const isGroup = c.type === 'group';
                                     const name = isGroup ? c.title : (c.direct_user_name || 'Người dùng');
@@ -470,7 +481,7 @@ app.get('/', (req, res) => {
                                     <div class="text-center py-12 px-4 text-slate-400 text-xs space-y-3">
                                         <p>Chưa có cuộc trò chuyện nào.</p>
                                         <button onclick="openSearchModal()" class="bg-emerald-100 text-emerald-700 font-bold px-3 py-1.5 rounded-lg hover:bg-emerald-200">
-                                            + Tìm bạn qua Gmail
+                                            + Thêm bạn qua Gmail
                                         </button>
                                     </div>
                                 `}
@@ -534,7 +545,7 @@ app.get('/', (req, res) => {
                         <!-- Vùng hiển thị tin nhắn -->
                         <div id="messages-stream" class="flex-1 overflow-y-auto p-4 space-y-2">
                             <div class="text-center py-20 text-slate-400 text-xs">
-                                Hãy chọn một cuộc trò chuyện ở bên trái hoặc tìm kiếm bạn bè bằng Gmail để bắt đầu nhắn tin.
+                                Hãy nhập Gmail vào ô tìm kiếm ở trên để kết bạn hoặc tạo nhóm chat để bắt đầu trò chuyện.
                             </div>
                         </div>
 
@@ -569,41 +580,42 @@ app.get('/', (req, res) => {
 
                     </div>
 
-                    <!-- MODAL: TÌM KIẾM & KẾT BẠN QUA GMAIL -->
-                    <div id="search-modal" class="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 hidden">
-                        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4 border border-emerald-100">
+                    <!-- MODAL TÌM KIẾM & KẾT BẠN QUA GMAIL (ĐÃ SỬA LỖI FOCUS & INPUT) -->
+                    <div id="search-modal" class="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-[9999] hidden" onclick="if(event.target === this) closeSearchModal()">
+                        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4 border border-emerald-100" onclick="event.stopPropagation()">
                             <div class="flex justify-between items-center border-b border-slate-100 pb-3">
                                 <h3 class="font-bold text-base text-slate-800">Tìm kiếm bạn bè qua Gmail</h3>
-                                <button onclick="closeSearchModal()" class="text-slate-400 hover:text-slate-700 text-xl font-bold">&times;</button>
+                                <button type="button" onclick="closeSearchModal()" class="text-slate-400 hover:text-slate-700 text-xl font-bold">&times;</button>
                             </div>
 
-                            <div class="flex gap-2">
-                                <input type="email" id="search-input" placeholder="Nhập Gmail bạn bè (vd: user@gmail.com)..." 
-                                    class="flex-1 text-xs px-3.5 py-2.5 bg-emerald-50/50 border border-emerald-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500">
-                                <button onclick="searchUsers()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-2 rounded-xl transition-colors">
-                                    Tìm
+                            <form onsubmit="searchUsersModal(event)" class="flex gap-2">
+                                <input type="text" id="modal-search-input" placeholder="Nhập Gmail bạn bè (vd: nhan@gmail.com)..." 
+                                    class="flex-1 text-xs px-3.5 py-2.5 bg-emerald-50/50 border border-emerald-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 text-slate-900"
+                                    autocomplete="off" required>
+                                <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-2 rounded-xl transition-colors">
+                                    Tìm kiếm
                                 </button>
-                            </div>
+                            </form>
 
-                            <div id="search-results" class="max-h-60 overflow-y-auto space-y-2 pt-2">
+                            <div id="modal-search-results" class="max-h-60 overflow-y-auto space-y-2 pt-2">
                                 <p class="text-center text-slate-400 text-xs">Nhập địa chỉ Gmail để tìm bạn bè.</p>
                             </div>
                         </div>
                     </div>
 
-                    <!-- MODAL: TẠO NHÓM CHAT MỚI -->
-                    <div id="group-modal" class="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 hidden">
-                        <div class="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 space-y-4 border border-emerald-100">
+                    <!-- MODAL TẠO NHÓM CHAT MỚI -->
+                    <div id="group-modal" class="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-[9999] hidden" onclick="if(event.target === this) closeCreateGroupModal()">
+                        <div class="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 space-y-4 border border-emerald-100" onclick="event.stopPropagation()">
                             <div class="flex justify-between items-center border-b border-slate-100 pb-3">
                                 <h3 class="font-bold text-base text-slate-800">Tạo nhóm chat mới</h3>
-                                <button onclick="closeCreateGroupModal()" class="text-slate-400 hover:text-slate-700 text-xl font-bold">&times;</button>
+                                <button type="button" onclick="closeCreateGroupModal()" class="text-slate-400 hover:text-slate-700 text-xl font-bold">&times;</button>
                             </div>
 
                             <form method="POST" action="/api/conversations/group" class="space-y-4">
                                 <div>
                                     <label class="block text-xs font-semibold text-slate-600 mb-1">Tên nhóm</label>
                                     <input type="text" name="title" placeholder="Ví dụ: Nhóm Đồ Án DevOps..." required
-                                        class="w-full text-xs px-3.5 py-2.5 bg-emerald-50/50 border border-emerald-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                                        class="w-full text-xs px-3.5 py-2.5 bg-emerald-50/50 border border-emerald-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 text-slate-900">
                                 </div>
                                 <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-2.5 rounded-xl transition-colors shadow-sm">
                                     Tạo nhóm ngay
@@ -612,56 +624,62 @@ app.get('/', (req, res) => {
                         </div>
                     </div>
 
-                    <!-- JAVASCRIPT ĐIỀU KHIỂN -->
+                    <!-- JAVASCRIPT ĐIỀU KHIỂN HOÀN CHỈNH -->
                     <script>
                         var currentUserId = ${req.user.id};
                         var activeConvId = ${selectedConvId || 0};
                         var pollTimer = null;
+                        var searchDebounceTimer = null;
 
-                        function switchTab(tab) {
-                            var chatsPanel = document.getElementById('chats-panel');
-                            var contactsPanel = document.getElementById('contacts-panel');
-                            var btnChats = document.getElementById('rail-chats-btn');
-                            var btnContacts = document.getElementById('rail-contacts-btn');
+                        // 1. TÌM KIẾM TRỰC TIẾP TRÊN THANH SIDEBAR
+                        function onSidebarSearch(val) {
+                            var query = val.trim();
+                            var clearBtn = document.getElementById('sidebar-search-clear');
+                            var resultsBox = document.getElementById('sidebar-search-results');
+                            var convList = document.getElementById('conversations-list');
 
-                            if (tab === 'chats') {
-                                chatsPanel.classList.remove('hidden');
-                                contactsPanel.classList.add('hidden');
-                                btnChats.className = 'w-10 h-10 rounded-xl bg-white/20 text-white flex items-center justify-center text-lg';
-                                btnContacts.className = 'w-10 h-10 rounded-xl hover:bg-white/10 text-white/80 flex items-center justify-center text-lg';
-                            } else {
-                                chatsPanel.classList.add('hidden');
-                                contactsPanel.classList.remove('hidden');
-                                btnContacts.className = 'w-10 h-10 rounded-xl bg-white/20 text-white flex items-center justify-center text-lg';
-                                btnChats.className = 'w-10 h-10 rounded-xl hover:bg-white/10 text-white/80 flex items-center justify-center text-lg';
+                            if (!query) {
+                                clearBtn.classList.add('hidden');
+                                resultsBox.classList.add('hidden');
+                                convList.classList.remove('hidden');
+                                return;
                             }
+
+                            clearBtn.classList.remove('hidden');
+                            clearTimeout(searchDebounceTimer);
+                            searchDebounceTimer = setTimeout(function() {
+                                executeSearch(query, resultsBox, function() {
+                                    resultsBox.classList.remove('hidden');
+                                    convList.classList.add('hidden');
+                                });
+                            }, 250);
                         }
 
-                        function openSearchModal() {
-                            document.getElementById('search-modal').classList.remove('hidden');
-                            document.getElementById('search-input').focus();
-                        }
-                        function closeSearchModal() {
-                            document.getElementById('search-modal').classList.add('hidden');
-                        }
-
-                        function openCreateGroupModal() {
-                            document.getElementById('group-modal').classList.remove('hidden');
-                        }
-                        function closeCreateGroupModal() {
-                            document.getElementById('group-modal').classList.add('hidden');
+                        function clearSidebarSearch() {
+                            var input = document.getElementById('sidebar-search-input');
+                            input.value = '';
+                            onSidebarSearch('');
+                            input.focus();
                         }
 
-                        function searchUsers() {
-                            var q = document.getElementById('search-input').value.trim();
+                        // 2. TÌM KIẾM TRONG MODAL
+                        function searchUsersModal(e) {
+                            if (e) e.preventDefault();
+                            var q = document.getElementById('modal-search-input').value.trim();
+                            var container = document.getElementById('modal-search-results');
                             if (!q) return;
+                            executeSearch(q, container);
+                        }
 
-                            fetch('/api/search?q=' + encodeURIComponent(q))
+                        // HÀM CHUNG THỰC THI TÌM KIẾM QUA API
+                        function executeSearch(query, targetContainer, onSuccess) {
+                            fetch('/api/search?q=' + encodeURIComponent(query))
                                 .then(function(res) { return res.json(); })
                                 .then(function(users) {
-                                    var container = document.getElementById('search-results');
-                                    if (users.length === 0) {
-                                        container.innerHTML = '<p class="text-center text-slate-400 text-xs py-4">Không tìm thấy tài khoản nào khớp với Gmail này.</p>';
+                                    if (onSuccess) onSuccess();
+
+                                    if (!users || users.length === 0) {
+                                        targetContainer.innerHTML = '<p class="text-center text-slate-400 text-xs py-4">Không tìm thấy tài khoản nào khớp với "' + query + '".</p>';
                                         return;
                                     }
 
@@ -669,27 +687,28 @@ app.get('/', (req, res) => {
                                     for (var i = 0; i < users.length; i++) {
                                         var u = users[i];
                                         var friendBtn = !u.is_friend 
-                                            ? '<button onclick="addFriend(' + u.id + ', this)" class="bg-emerald-100 text-emerald-800 font-semibold text-xs px-2.5 py-1 rounded-lg hover:bg-emerald-200">Kết bạn</button>'
+                                            ? '<button onclick="addFriend(' + u.id + ', this)" class="bg-emerald-100 text-emerald-800 font-semibold text-xs px-2.5 py-1 rounded-lg hover:bg-emerald-200 transition-colors">Kết bạn</button>'
                                             : '<span class="text-[10px] text-emerald-600 font-semibold px-2 py-1">Bạn bè</span>';
 
-                                        html += '<div class="flex items-center justify-between p-2.5 bg-slate-50 rounded-xl border border-slate-100">' +
-                                            '<div class="flex items-center gap-2.5">' +
-                                                '<img src="' + u.avatar_url + '" class="w-9 h-9 rounded-full object-cover">' +
-                                                '<div>' +
-                                                    '<span class="font-bold text-xs text-slate-800 block">' + u.full_name + '</span>' +
-                                                    '<span class="text-[10px] text-slate-400 block">' + u.email + '</span>' +
+                                        html += '<div class="flex items-center justify-between p-2.5 bg-white rounded-xl border border-emerald-100 shadow-2xs my-1">' +
+                                            '<div class="flex items-center gap-2.5 min-w-0">' +
+                                                '<img src="' + u.avatar_url + '" class="w-9 h-9 rounded-full object-cover ring-1 ring-emerald-200">' +
+                                                '<div class="min-w-0">' +
+                                                    '<span class="font-bold text-xs text-slate-800 block truncate">' + u.full_name + '</span>' +
+                                                    '<span class="text-[10px] text-slate-400 block truncate">' + u.email + '</span>' +
                                                 '</div>' +
                                             '</div>' +
-                                            '<div class="flex gap-1.5">' +
+                                            '<div class="flex items-center gap-1.5 flex-shrink-0">' +
                                                 friendBtn +
-                                                '<button onclick="startDirectChat(' + u.id + ')" class="bg-emerald-600 text-white font-semibold text-xs px-2.5 py-1 rounded-lg hover:bg-emerald-700">Nhắn tin</button>' +
+                                                '<button onclick="startDirectChat(' + u.id + ')" class="bg-emerald-600 text-white font-semibold text-xs px-2.5 py-1 rounded-lg hover:bg-emerald-700 transition-colors">Nhắn tin</button>' +
                                             '</div>' +
                                         '</div>';
                                     }
-                                    container.innerHTML = html;
+                                    targetContainer.innerHTML = html;
                                 });
                         }
 
+                        // KẾT BẠN
                         function addFriend(friendId, btn) {
                             btn.disabled = true;
                             btn.innerText = 'Đang thêm...';
@@ -705,8 +724,10 @@ app.get('/', (req, res) => {
                             });
                         }
 
+                        // NHẮN TIN 1-1
                         function startDirectChat(userId) {
                             closeSearchModal();
+                            clearSidebarSearch();
                             fetch('/api/conversations/direct', {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
@@ -720,6 +741,7 @@ app.get('/', (req, res) => {
                             });
                         }
 
+                        // CHỌN CUỘC TRÒ CHUYỆN
                         function selectConversation(convId, title, type) {
                             activeConvId = convId;
                             var cards = document.querySelectorAll('.conv-card');
@@ -740,16 +762,17 @@ app.get('/', (req, res) => {
 
                             loadMessages();
                             if (pollTimer) clearInterval(pollTimer);
-                            pollTimer = setInterval(loadMessages, 2000);
+                            pollTimer = setInterval(loadMessages, 2000); // Cập nhật real-time mỗi 2 giây
                         }
 
+                        // TẢI TIN NHẮN
                         function loadMessages() {
                             if (!activeConvId) return;
                             fetch('/api/messages?conversation_id=' + activeConvId)
                                 .then(function(res) { return res.json(); })
                                 .then(function(messages) {
                                     var container = document.getElementById('messages-stream');
-                                    if (messages.length === 0) {
+                                    if (!messages || messages.length === 0) {
                                         container.innerHTML = '<div class="text-center py-16 text-slate-400 text-xs">Chưa có tin nhắn nào. Hãy gửi lời chào đầu tiên!</div>';
                                         return;
                                     }
@@ -765,7 +788,7 @@ app.get('/', (req, res) => {
 
                                         if (isMe) {
                                             html += '<div class="flex justify-end gap-2 my-1.5 group">' +
-                                                '<button onclick="deleteMsg(' + m.id + ')" class="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-rose-500 text-xs self-center" title="Xóa tin nhắn">🗑️</button>' +
+                                                '<button onclick="deleteMsg(' + m.id + ')" class="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-rose-500 text-xs self-center transition-opacity" title="Xóa tin nhắn">🗑️</button>' +
                                                 '<div class="max-w-[70%] text-right">' +
                                                     '<div class="bg-emerald-600 text-white text-xs px-4 py-2.5 rounded-2xl rounded-tr-none shadow-xs text-left inline-block">' +
                                                         (m.content ? '<span>' + m.content + '</span>' : '') +
@@ -776,7 +799,7 @@ app.get('/', (req, res) => {
                                             '</div>';
                                         } else {
                                             html += '<div class="flex items-start gap-2.5 my-1.5">' +
-                                                '<img src="' + m.sender_avatar + '" class="w-8 h-8 rounded-full object-cover flex-shrink-0 mt-0.5">' +
+                                                '<img src="' + m.sender_avatar + '" class="w-8 h-8 rounded-full object-cover flex-shrink-0 mt-0.5 ring-1 ring-emerald-200">' +
                                                 '<div class="max-w-[70%]">' +
                                                     '<span class="text-[11px] font-semibold text-slate-700 block mb-0.5">' + m.sender_name + '</span>' +
                                                     '<div class="bg-white border border-emerald-100 text-slate-800 text-xs px-4 py-2.5 rounded-2xl rounded-tl-none shadow-xs inline-block">' +
@@ -796,6 +819,7 @@ app.get('/', (req, res) => {
                                 });
                         }
 
+                        // GỬI TIN NHẮN
                         function sendMessage(e) {
                             e.preventDefault();
                             var input = document.getElementById('msg-input');
@@ -822,6 +846,7 @@ app.get('/', (req, res) => {
                             });
                         }
 
+                        // XÓA TIN NHẮN
                         function deleteMsg(id) {
                             if (!confirm('Bạn có muốn xóa tin nhắn này?')) return;
                             fetch('/api/messages/delete', {
@@ -842,6 +867,49 @@ app.get('/', (req, res) => {
                         function toggleMediaInput() {
                             var box = document.getElementById('media-input-box');
                             box.classList.toggle('hidden');
+                        }
+
+                        function switchTab(tab) {
+                            var chatsPanel = document.getElementById('chats-panel');
+                            var contactsPanel = document.getElementById('contacts-panel');
+                            var btnChats = document.getElementById('rail-chats-btn');
+                            var btnContacts = document.getElementById('rail-contacts-btn');
+
+                            if (tab === 'chats') {
+                                chatsPanel.classList.remove('hidden');
+                                contactsPanel.classList.add('hidden');
+                                btnChats.className = 'w-10 h-10 rounded-xl bg-white/20 text-white flex items-center justify-center text-lg';
+                                btnContacts.className = 'w-10 h-10 rounded-xl hover:bg-white/10 text-white/80 flex items-center justify-center text-lg';
+                            } else {
+                                chatsPanel.classList.add('hidden');
+                                contactsPanel.classList.remove('hidden');
+                                btnContacts.className = 'w-10 h-10 rounded-xl bg-white/20 text-white flex items-center justify-center text-lg';
+                                btnChats.className = 'w-10 h-10 rounded-xl hover:bg-white/10 text-white/80 flex items-center justify-center text-lg';
+                            }
+                        }
+
+                        function openSearchModal() {
+                            var modal = document.getElementById('search-modal');
+                            modal.classList.remove('hidden');
+                            setTimeout(function() {
+                                var input = document.getElementById('modal-search-input');
+                                if (input) {
+                                    input.focus();
+                                    input.select();
+                                }
+                            }, 50);
+                        }
+
+                        function closeSearchModal() {
+                            document.getElementById('search-modal').classList.add('hidden');
+                        }
+
+                        function openCreateGroupModal() {
+                            document.getElementById('group-modal').classList.remove('hidden');
+                        }
+
+                        function closeCreateGroupModal() {
+                            document.getElementById('group-modal').classList.add('hidden');
                         }
 
                         window.onload = function() {

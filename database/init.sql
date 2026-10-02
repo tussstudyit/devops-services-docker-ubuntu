@@ -1,14 +1,8 @@
 CREATE DATABASE IF NOT EXISTS devops_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE devops_db;
 
-DROP TABLE IF EXISTS messages;
-DROP TABLE IF EXISTS conversation_members;
-DROP TABLE IF EXISTS conversations;
-DROP TABLE IF EXISTS friendships;
-DROP TABLE IF EXISTS users;
-
--- 1. Bảng Người dùng (Tài khoản Gmail)
-CREATE TABLE users (
+-- Dùng CREATE TABLE IF NOT EXISTS để không bao giờ làm mất dữ liệu người dùng khi restart
+CREATE TABLE IF NOT EXISTS users (
     id INT AUTO_INCREMENT PRIMARY KEY,
     email VARCHAR(100) UNIQUE NOT NULL,
     password VARCHAR(255) NOT NULL,
@@ -19,8 +13,7 @@ CREATE TABLE users (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
--- 2. Bảng Bạn bè (Kết bạn qua Gmail)
-CREATE TABLE friendships (
+CREATE TABLE IF NOT EXISTS friendships (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
     friend_id INT NOT NULL,
@@ -31,8 +24,7 @@ CREATE TABLE friendships (
     FOREIGN KEY (friend_id) REFERENCES users(id) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
--- 3. Bảng Cuộc trò chuyện (Chat 1-1 hoặc Nhóm)
-CREATE TABLE conversations (
+CREATE TABLE IF NOT EXISTS conversations (
     id INT AUTO_INCREMENT PRIMARY KEY,
     type ENUM('direct', 'group') NOT NULL DEFAULT 'direct',
     title VARCHAR(150) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '',
@@ -42,8 +34,7 @@ CREATE TABLE conversations (
     FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
--- 4. Bảng Thành viên trong Cuộc trò chuyện
-CREATE TABLE conversation_members (
+CREATE TABLE IF NOT EXISTS conversation_members (
     id INT AUTO_INCREMENT PRIMARY KEY,
     conversation_id INT NOT NULL,
     user_id INT NOT NULL,
@@ -53,8 +44,7 @@ CREATE TABLE conversation_members (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
--- 5. Bảng Tin nhắn
-CREATE TABLE messages (
+CREATE TABLE IF NOT EXISTS messages (
     id INT AUTO_INCREMENT PRIMARY KEY,
     conversation_id INT NOT NULL,
     sender_id INT NOT NULL,
@@ -64,5 +54,3 @@ CREATE TABLE messages (
     FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE,
     FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-
--- Không chèn bất kỳ dữ liệu mẫu nào, hoàn toàn sạch sẽ để người dùng tự đăng ký và trải nghiệm thực tế.
