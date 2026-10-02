@@ -6,7 +6,7 @@ const app = express();
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
-// Kết nối MySQL với pool và utf8mb4
+// Kết nối MySQL pool với charset utf8mb4
 const db = mysql.createPool({
     connectionLimit: 10,
     host: process.env.DB_HOST || 'db',
@@ -16,9 +16,9 @@ const db = mysql.createPool({
     charset: 'utf8mb4'
 });
 
-const APP_VERSION = "v1.0.0"; // Phục vụ demo CI/CD v1.0 -> v2.0
+const APP_VERSION = "v1.0.0"; // Phục vụ demo nâng cấp CI/CD v1.0 -> v2.0
 
-// Helper phân tích cookie
+// Helper: Phân tích cookie
 function parseCookies(req) {
     const list = {};
     const rc = req.headers.cookie;
@@ -33,15 +33,15 @@ function parseCookies(req) {
     return list;
 }
 
-// Middleware xác thực người dùng qua cookie
+// Middleware: Xác thực người dùng
 function authMiddleware(req, res, next) {
     const cookies = parseCookies(req);
-    const userId = cookies.greenchat_user_id;
+    const userId = cookies.greenchat_uid;
     if (!userId) {
         req.user = null;
         return next();
     }
-    db.query('SELECT id, email, full_name, avatar_url, status FROM users WHERE id = ?', [userId], (err, results) => {
+    db.query('SELECT id, email, full_name, avatar_url, bio, status FROM users WHERE id = ?', [userId], (err, results) => {
         if (!err && results.length > 0) {
             req.user = results[0];
         } else {
@@ -53,7 +53,7 @@ function authMiddleware(req, res, next) {
 
 app.use(authMiddleware);
 
-// ==================== AUTH ROUTES (GMAIL) ====================
+// ==================== AUTHENTICATION (GMAIL) ====================
 
 app.get('/login', (req, res) => {
     if (req.user) return res.redirect('/');
@@ -78,33 +78,31 @@ app.get('/login', (req, res) => {
         <body class="min-h-screen flex items-center justify-center p-4">
             <div class="max-w-md w-full bg-white rounded-2xl shadow-xl border border-emerald-100 p-8 space-y-6">
                 
-                <!-- GreenChat Brand Header -->
                 <div class="text-center space-y-2">
                     <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-emerald-600 text-white font-bold text-3xl shadow-lg shadow-emerald-600/30">
                         🌿
                     </div>
                     <h2 class="text-2xl font-bold text-slate-800">GreenChat</h2>
-                    <p class="text-xs text-emerald-700 font-medium">Hệ thống nhắn tin nhóm nội bộ DevOps</p>
+                    <p class="text-xs text-emerald-700 font-medium">Nền tảng nhắn tin & kết bạn qua Gmail</p>
                 </div>
 
                 ${errorMsg ? `<div class="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-xl">${errorMsg}</div>` : ''}
                 ${successMsg ? `<div class="p-3 bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs rounded-xl">${successMsg}</div>` : ''}
 
-                <!-- Tabs: Đăng nhập / Đăng ký -->
                 <div class="flex border-b border-emerald-100 text-sm font-semibold">
                     <button id="tab-login-btn" onclick="showTab('login')" class="flex-1 pb-3 text-emerald-600 border-b-2 border-emerald-600 transition-colors">
                         Đăng nhập
                     </button>
                     <button id="tab-register-btn" onclick="showTab('register')" class="flex-1 pb-3 text-slate-400 hover:text-slate-700 transition-colors">
-                        Đăng ký Gmail mới
+                        Đăng ký Gmail
                     </button>
                 </div>
 
-                <!-- FORM ĐĂNG NHẬP -->
+                <!-- Form Đăng nhập -->
                 <form id="form-login" method="POST" action="/login" class="space-y-4">
                     <div>
                         <label class="block text-xs font-semibold text-slate-600 mb-1">Địa chỉ Gmail</label>
-                        <input type="email" name="email" placeholder="tentaikhoan@gmail.com" required
+                        <input type="email" name="email" placeholder="example@gmail.com" required
                             class="w-full px-3.5 py-2.5 bg-emerald-50/40 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition-all">
                     </div>
 
@@ -116,11 +114,11 @@ app.get('/login', (req, res) => {
 
                     <button type="submit" 
                         class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl text-sm transition-all shadow-md shadow-emerald-600/20">
-                        Đăng nhập với Gmail
+                        Đăng nhập ngay
                     </button>
                 </form>
 
-                <!-- FORM ĐĂNG KÝ GMAIL -->
+                <!-- Form Đăng ký -->
                 <form id="form-register" method="POST" action="/register" class="space-y-3.5 hidden">
                     <div>
                         <label class="block text-xs font-semibold text-slate-600 mb-1">Họ và tên của bạn</label>
@@ -129,28 +127,25 @@ app.get('/login', (req, res) => {
                     </div>
 
                     <div>
-                        <label class="block text-xs font-semibold text-slate-600 mb-1">Gmail của bạn</label>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Gmail cá nhân</label>
                         <input type="email" name="email" placeholder="tentaikhoan@gmail.com" required
                             class="w-full px-3.5 py-2 bg-emerald-50/40 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white">
                     </div>
 
                     <div>
                         <label class="block text-xs font-semibold text-slate-600 mb-1">Mật khẩu</label>
-                        <input type="password" name="password" placeholder="Tạo mật khẩu mới" required
+                        <input type="password" name="password" placeholder="Tạo mật khẩu" required
                             class="w-full px-3.5 py-2 bg-emerald-50/40 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white">
                     </div>
 
                     <button type="submit" 
                         class="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-bold py-2.5 rounded-xl text-sm transition-all shadow-md">
-                        Đăng ký tài khoản GreenChat
+                        Tạo tài khoản GreenChat
                     </button>
                 </form>
 
-                <!-- Box gợi ý tài khoản mẫu -->
-                <div class="bg-emerald-50 border border-emerald-200/80 rounded-xl p-3 text-xs text-emerald-900 space-y-1">
-                    <p class="font-bold flex items-center gap-1">🔑 Tài khoản có sẵn để test nhanh:</p>
-                    <p>• <b>tuss.devops@gmail.com</b> / pass: <b>123456</b> (Đặng Tuấn)</p>
-                    <p>• <b>hoangnam.le@gmail.com</b> / pass: <b>123456</b> (Lê Hoàng Nam)</p>
+                <div class="text-center text-xs text-slate-400">
+                    Ứng dụng vận hành hoàn toàn trên Docker Ubuntu • MySQL
                 </div>
 
             </div>
@@ -180,19 +175,17 @@ app.get('/login', (req, res) => {
     `);
 });
 
-// Xử lý Đăng nhập
 app.post('/login', (req, res) => {
     const { email, password } = req.body;
-    db.query('SELECT * FROM users WHERE email = ? AND password = ?', [email.trim(), password], (err, results) => {
+    db.query('SELECT * FROM users WHERE email = ? AND password = ?', [email.trim().toLowerCase(), password], (err, results) => {
         if (err || results.length === 0) {
-            return res.redirect('/login?error=' + encodeURIComponent('Gmail hoặc mật khẩu không chính xác!'));
+            return res.redirect('/login?error=' + encodeURIComponent('Địa chỉ Gmail hoặc mật khẩu không chính xác!'));
         }
-        res.setHeader('Set-Cookie', `greenchat_user_id=${results[0].id}; Path=/; HttpOnly`);
+        res.setHeader('Set-Cookie', `greenchat_uid=${results[0].id}; Path=/; HttpOnly`);
         res.redirect('/');
     });
 });
 
-// Xử lý Đăng ký bằng Gmail
 app.post('/register', (req, res) => {
     const { full_name, email, password } = req.body;
     const cleanEmail = email.trim().toLowerCase();
@@ -203,289 +196,667 @@ app.post('/register', (req, res) => {
         [full_name, cleanEmail, password, avatar],
         (err, result) => {
             if (err) {
-                return res.redirect('/login?error=' + encodeURIComponent('Địa chỉ Gmail này đã được đăng ký trước đó!'));
+                return res.redirect('/login?error=' + encodeURIComponent('Gmail này đã được đăng ký, vui lòng dùng Gmail khác!'));
             }
-            res.setHeader('Set-Cookie', `greenchat_user_id=${result.insertId}; Path=/; HttpOnly`);
+            res.setHeader('Set-Cookie', `greenchat_uid=${result.insertId}; Path=/; HttpOnly`);
             res.redirect('/');
         }
     );
 });
 
-// Xử lý Đăng xuất
 app.get('/logout', (req, res) => {
-    res.setHeader('Set-Cookie', 'greenchat_user_id=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT');
+    res.setHeader('Set-Cookie', 'greenchat_uid=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT');
     res.redirect('/login');
 });
 
-// ==================== GREENCHAT MAIN INTERFACE ====================
+// ==================== TÌM KIẾM & KẾT BẠN QUA GMAIL ====================
+
+// API Tìm kiếm người dùng qua Gmail
+app.get('/api/search', (req, res) => {
+    if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
+    const query = (req.query.q || '').trim();
+    if (!query) return res.json([]);
+
+    const sql = `
+        SELECT u.id, u.email, u.full_name, u.avatar_url,
+               IF(f.id IS NOT NULL, 1, 0) AS is_friend
+        FROM users u
+        LEFT JOIN friendships f ON (f.user_id = ? AND f.friend_id = u.id)
+        WHERE (u.email LIKE ? OR u.full_name LIKE ?) AND u.id != ?
+        LIMIT 10
+    `;
+    db.query(sql, [req.user.id, `%${query}%`, `%${query}%`, req.user.id], (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(results || []);
+    });
+});
+
+// Thêm bạn bè
+app.post('/api/friends/add', (req, res) => {
+    if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
+    const friendId = parseInt(req.body.friend_id);
+    if (!friendId || friendId === req.user.id) return res.status(400).json({ error: 'Invalid user' });
+
+    // Tạo quan hệ bạn bè 2 chiều
+    const sql = `INSERT IGNORE INTO friendships (user_id, friend_id) VALUES (?, ?), (?, ?)`;
+    db.query(sql, [req.user.id, friendId, friendId, req.user.id], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ success: true });
+    });
+});
+
+// Bắt đầu cuộc trò chuyện 1-1 với một người bạn
+app.post('/api/conversations/direct', (req, res) => {
+    if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
+    const targetUserId = parseInt(req.body.user_id);
+    if (!targetUserId || targetUserId === req.user.id) return res.status(400).json({ error: 'Invalid user' });
+
+    // Kiểm tra xem đã có cuộc trò chuyện 1-1 giữa 2 người này chưa
+    const checkSql = `
+        SELECT c.id 
+        FROM conversations c
+        JOIN conversation_members cm1 ON c.id = cm1.conversation_id AND cm1.user_id = ?
+        JOIN conversation_members cm2 ON c.id = cm2.conversation_id AND cm2.user_id = ?
+        WHERE c.type = 'direct'
+        LIMIT 1
+    `;
+    db.query(checkSql, [req.user.id, targetUserId], (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+
+        if (results.length > 0) {
+            return res.json({ conversation_id: results[0].id });
+        }
+
+        // Tạo cuộc trò chuyện 1-1 mới
+        db.query('INSERT INTO conversations (type, created_by) VALUES ("direct", ?)', [req.user.id], (err, convRes) => {
+            if (err) return res.status(500).json({ error: err.message });
+            const convId = convRes.insertId;
+
+            db.query('INSERT INTO conversation_members (conversation_id, user_id) VALUES (?, ?), (?, ?)',
+                [convId, req.user.id, convId, targetUserId],
+                (err) => {
+                    if (err) return res.status(500).json({ error: err.message });
+                    res.json({ conversation_id: convId });
+                }
+            );
+        });
+    });
+});
+
+// Tạo nhóm chat mới
+app.post('/api/conversations/group', (req, res) => {
+    if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
+    const { title } = req.body;
+    if (!title) return res.status(400).json({ error: 'Thiếu tên nhóm' });
+
+    db.query('INSERT INTO conversations (type, title, created_by) VALUES ("group", ?, ?)', [title.trim(), req.user.id], (err, convRes) => {
+        if (err) return res.status(500).json({ error: err.message });
+        const convId = convRes.insertId;
+
+        // Thêm người tạo vào nhóm
+        db.query('INSERT INTO conversation_members (conversation_id, user_id) VALUES (?, ?)', [convId, req.user.id], (err) => {
+            res.redirect(`/?conv=${convId}`);
+        });
+    });
+});
+
+// Lấy danh sách tin nhắn của 1 cuộc trò chuyện (Phục vụ Real-time Polling)
+app.get('/api/messages', (req, res) => {
+    if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
+    const convId = parseInt(req.query.conversation_id);
+    if (!convId) return res.json([]);
+
+    const sql = `
+        SELECT m.id, m.content, m.image_url, m.created_at, m.sender_id,
+               u.full_name AS sender_name, u.avatar_url AS sender_avatar
+        FROM messages m
+        JOIN users u ON m.sender_id = u.id
+        WHERE m.conversation_id = ?
+        ORDER BY m.id ASC
+    `;
+    db.query(sql, [convId], (err, messages) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(messages || []);
+    });
+});
+
+// Gửi tin nhắn mới
+app.post('/api/messages', (req, res) => {
+    if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
+    const { conversation_id, content, image_url } = req.body;
+    if (!conversation_id || (!content && !image_url)) return res.status(400).json({ error: 'Nội dung trống' });
+
+    db.query(
+        'INSERT INTO messages (conversation_id, sender_id, content, image_url) VALUES (?, ?, ?, ?)',
+        [conversation_id, req.user.id, content || '', image_url || ''],
+        (err, result) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ success: true, message_id: result.insertId });
+        }
+    );
+});
+
+// Xóa tin nhắn
+app.post('/api/messages/delete', (req, res) => {
+    if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
+    const msgId = parseInt(req.body.message_id);
+    db.query('DELETE FROM messages WHERE id = ? AND sender_id = ?', [msgId, req.user.id], (err) => {
+        res.json({ success: true });
+    });
+});
+
+// ==================== MAIN APPLICATION VIEW ====================
 
 app.get('/', (req, res) => {
     if (!req.user) return res.redirect('/login');
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
 
-    const activeRoomId = parseInt(req.query.room) || 1;
+    const selectedConvId = parseInt(req.query.conv) || 0;
 
-    // Lấy danh sách các phòng chat
-    db.query('SELECT * FROM rooms ORDER BY id ASC', (err, rooms) => {
-        if (err) return res.status(500).send(`Lỗi database: ${err.message}`);
+    // 1. Lấy danh sách các cuộc trò chuyện của người dùng hiện tại
+    const convSql = `
+        SELECT c.id, c.type, c.title, c.created_at,
+               (SELECT content FROM messages WHERE conversation_id = c.id ORDER BY id DESC LIMIT 1) AS last_message,
+               (SELECT created_at FROM messages WHERE conversation_id = c.id ORDER BY id DESC LIMIT 1) AS last_message_time,
+               u.full_name AS direct_user_name,
+               u.avatar_url AS direct_user_avatar,
+               u.email AS direct_user_email
+        FROM conversations c
+        JOIN conversation_members cm ON c.id = cm.conversation_id AND cm.user_id = ?
+        LEFT JOIN conversation_members cm_other ON c.id = cm_other.conversation_id AND cm_other.user_id != ? AND c.type = 'direct'
+        LEFT JOIN users u ON cm_other.user_id = u.id
+        ORDER BY COALESCE(last_message_time, c.created_at) DESC
+    `;
 
-        const currentRoom = (rooms || []).find(r => r.id === activeRoomId) || rooms[0] || { id: 1, name: 'Nhóm Chung', description: '' };
-
-        // Lấy tin nhắn của phòng hiện tại
-        const sqlMessages = `
-            SELECT m.*, u.full_name AS sender_name, u.avatar_url AS sender_avatar, u.email AS sender_email
-            FROM messages m
-            JOIN users u ON m.user_id = u.id
-            WHERE m.room_id = ?
-            ORDER BY m.id ASC
+    db.query(convSql, [req.user.id, req.user.id], (err, conversations) => {
+        // 2. Lấy danh sách bạn bè (Contacts)
+        const friendsSql = `
+            SELECT u.id, u.email, u.full_name, u.avatar_url, u.status
+            FROM friendships f
+            JOIN users u ON f.friend_id = u.id
+            WHERE f.user_id = ?
+            ORDER BY u.full_name ASC
         `;
+        db.query(friendsSql, [req.user.id], (err, friends) => {
 
-        db.query(sqlMessages, [currentRoom.id], (err, messages) => {
-            // Lấy danh sách thành viên online
-            db.query('SELECT id, full_name, avatar_url, email FROM users ORDER BY id ASC', (err, members) => {
-                
-                // Render danh sách phòng bên sidebar
-                const roomsHtml = (rooms || []).map(r => {
-                    const isActive = r.id === currentRoom.id;
-                    return `
-                        <a href="/?room=${r.id}" class="flex items-center gap-3 p-3 rounded-xl transition-all ${isActive ? 'bg-emerald-50 text-emerald-800 font-semibold border-l-4 border-emerald-600 shadow-xs' : 'hover:bg-slate-100/80 text-slate-700'}">
-                            <div class="w-10 h-10 rounded-xl bg-emerald-100/60 text-emerald-700 flex items-center justify-center text-xl flex-shrink-0">
-                                ${r.avatar || '🌿'}
-                            </div>
-                            <div class="flex-1 min-w-0">
-                                <h4 class="text-xs truncate ${isActive ? 'text-emerald-800 font-bold' : 'text-slate-800'}">${r.name}</h4>
-                                <p class="text-[11px] text-slate-400 truncate">${r.description || 'Kênh chat nhóm'}</p>
-                            </div>
-                        </a>
-                    `;
-                }).join('');
+            res.send(`
+                <!DOCTYPE html>
+                <html lang="vi">
+                <head>
+                    <meta charset="UTF-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <title>GreenChat - Tin nhắn & Danh bạ</title>
+                    <script src="https://cdn.tailwindcss.com"></script>
+                    <link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600;700&display=swap" rel="stylesheet">
+                    <style>
+                        body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background-color: #f0fdf4; }
+                    </style>
+                </head>
+                <body class="h-screen flex overflow-hidden">
 
-                // Render tin nhắn trong phòng
-                const messagesHtml = (messages || []).map(m => {
-                    const isMe = m.user_id === req.user.id;
-                    const timeStr = new Date(m.created_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
-
-                    if (isMe) {
-                        return `
-                            <div class="flex justify-end gap-2 my-2">
-                                <div class="max-w-[70%] text-right">
-                                    <div class="bg-emerald-600 text-white text-xs px-4 py-2.5 rounded-2xl rounded-tr-none shadow-xs text-left inline-block">
-                                        ${m.content}
-                                    </div>
-                                    <span class="text-[10px] text-emerald-700/60 block mt-0.5">${timeStr}</span>
-                                </div>
+                    <!-- 1. LEFT RAIL BAR (Màu xanh ngọc đậm) -->
+                    <nav class="w-16 bg-emerald-700 flex flex-col items-center py-4 justify-between flex-shrink-0 z-20 shadow-md">
+                        <div class="flex flex-col items-center gap-6 w-full">
+                            <div class="w-10 h-10 rounded-xl bg-white text-emerald-700 flex items-center justify-center font-bold text-xl shadow-sm">
+                                🌿
                             </div>
-                        `;
-                    } else {
-                        return `
-                            <div class="flex items-start gap-2.5 my-2">
-                                <img src="${m.sender_avatar}" class="w-8 h-8 rounded-full object-cover flex-shrink-0 mt-0.5 ring-1 ring-emerald-200">
-                                <div class="max-w-[70%]">
-                                    <span class="text-[11px] font-semibold text-slate-700 block mb-0.5">${m.sender_name}</span>
-                                    <div class="bg-white border border-emerald-100 text-slate-800 text-xs px-4 py-2.5 rounded-2xl rounded-tl-none shadow-xs inline-block">
-                                        ${m.content}
-                                    </div>
-                                    <span class="text-[10px] text-slate-400 block mt-0.5">${timeStr}</span>
-                                </div>
-                            </div>
-                        `;
-                    }
-                }).join('');
-
-                // Render danh sách thành viên bên phải
-                const membersHtml = (members || []).map(u => `
-                    <li class="flex items-center justify-between p-2 hover:bg-emerald-50/50 rounded-lg transition-colors">
-                        <div class="flex items-center gap-2.5">
-                            <div class="relative">
-                                <img src="${u.avatar_url}" class="w-8 h-8 rounded-full object-cover ring-1 ring-emerald-200">
-                                <span class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 border-2 border-white rounded-full"></span>
-                            </div>
-                            <div>
-                                <span class="font-semibold text-xs text-slate-800 block">${u.full_name}</span>
-                                <span class="text-[10px] text-slate-400 truncate block max-w-[120px]">${u.email}</span>
-                            </div>
+                            <button onclick="switchTab('chats')" id="rail-chats-btn" class="w-10 h-10 rounded-xl bg-white/20 text-white flex items-center justify-center text-lg" title="Tin nhắn">
+                                💬
+                            </button>
+                            <button onclick="switchTab('contacts')" id="rail-contacts-btn" class="w-10 h-10 rounded-xl hover:bg-white/10 text-white/80 flex items-center justify-center text-lg transition-colors" title="Danh bạ bạn bè">
+                                👥
+                            </button>
                         </div>
-                    </li>
-                `).join('');
 
-                res.send(`
-                    <!DOCTYPE html>
-                    <html lang="vi">
-                    <head>
-                        <meta charset="UTF-8">
-                        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                        <title>GreenChat - ${currentRoom.name}</title>
-                        <script src="https://cdn.tailwindcss.com"></script>
-                        <link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600;700&display=swap" rel="stylesheet">
-                        <style>
-                            body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background-color: #f0fdf4; }
-                        </style>
-                    </head>
-                    <body class="h-screen flex overflow-hidden">
+                        <div class="flex flex-col items-center gap-4">
+                            <span class="text-[9px] bg-white/20 text-white px-1.5 py-0.5 rounded font-mono">${APP_VERSION}</span>
+                            <a href="/logout" title="Đăng xuất" class="text-white/80 hover:text-white p-2 text-lg">
+                                🚪
+                            </a>
+                        </div>
+                    </nav>
 
-                        <!-- 1. LEFT RAIL ICON NAVIGATION (MÀU XANH LÁ ĐẬM) -->
-                        <nav class="w-16 bg-emerald-700 flex flex-col items-center py-4 justify-between flex-shrink-0 z-20 shadow-md">
-                            <div class="flex flex-col items-center gap-6 w-full">
-                                <div class="w-10 h-10 rounded-xl bg-white text-emerald-700 flex items-center justify-center font-bold text-xl shadow-sm">
-                                    🌿
+                    <!-- 2. MIDDLE COLUMN: DANH SÁCH HỘI THOẠI HOẶC DANH BẠ -->
+                    <div class="w-80 bg-white border-r border-emerald-100 flex flex-col flex-shrink-0">
+                        
+                        <!-- Header người dùng -->
+                        <div class="p-3.5 border-b border-emerald-100 flex items-center justify-between bg-emerald-50/30">
+                            <div class="flex items-center gap-2.5">
+                                <img src="${req.user.avatar_url}" class="w-9 h-9 rounded-full object-cover ring-2 ring-emerald-600">
+                                <div>
+                                    <h3 class="font-bold text-xs text-slate-800">${req.user.full_name}</h3>
+                                    <span class="text-[10px] text-emerald-600 font-medium">${req.user.email}</span>
                                 </div>
-                                <a href="/" class="w-10 h-10 rounded-xl bg-white/20 text-white flex items-center justify-center text-lg shadow-inner" title="Tin nhắn">
-                                    💬
-                                </a>
-                                <a href="#" class="w-10 h-10 rounded-xl hover:bg-white/10 text-white/80 flex items-center justify-center text-lg transition-colors" title="Danh bạ">
-                                    👥
-                                </a>
                             </div>
+                            <button onclick="openSearchModal()" class="w-8 h-8 rounded-full bg-emerald-100/70 text-emerald-700 flex items-center justify-center text-sm hover:bg-emerald-200 transition-colors" title="Tìm kết bạn qua Gmail">
+                                🔍
+                            </button>
+                        </div>
 
-                            <div class="flex flex-col items-center gap-4">
-                                <span class="text-[9px] bg-white/20 text-white px-1.5 py-0.5 rounded font-mono">${APP_VERSION}</span>
-                                <a href="/logout" title="Đăng xuất" class="text-white/80 hover:text-white p-2 text-lg">
-                                    🚪
-                                </a>
-                            </div>
-                        </nav>
-
-                        <!-- 2. MIDDLE COLUMN: DANH SÁCH NHÓM CHAT -->
-                        <div class="w-72 bg-white border-r border-emerald-100 flex flex-col flex-shrink-0">
-                            <!-- Header user profile -->
-                            <div class="p-3.5 border-b border-emerald-100 flex items-center justify-between bg-emerald-50/30">
-                                <div class="flex items-center gap-2.5">
-                                    <img src="${req.user.avatar_url}" class="w-9 h-9 rounded-full object-cover ring-2 ring-emerald-600">
-                                    <div>
-                                        <h3 class="font-bold text-xs text-slate-800">${req.user.full_name}</h3>
-                                        <span class="text-[10px] text-emerald-600 font-medium">● Đang hoạt động</span>
-                                    </div>
-                                </div>
-                                <a href="/logout" class="text-xs text-slate-400 hover:text-rose-500" title="Đăng xuất">Thoát</a>
-                            </div>
-
-                            <!-- Search & List rooms -->
-                            <div class="p-3 border-b border-slate-100">
-                                <input type="text" placeholder="Tìm kiếm nhóm chat..." 
-                                    class="w-full bg-emerald-50/50 text-xs px-3 py-2 rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 border border-emerald-100">
+                        <!-- Panel: Tin nhắn (Chats) -->
+                        <div id="chats-panel" class="flex-1 flex flex-col overflow-hidden">
+                            <div class="p-3 border-b border-slate-100 flex gap-2">
+                                <button onclick="openSearchModal()" class="flex-1 bg-emerald-50/60 border border-emerald-100 text-slate-500 text-xs px-3 py-2 rounded-xl text-left hover:bg-emerald-100/50 transition-colors">
+                                    🔍 Tìm bạn qua Gmail...
+                                </button>
+                                <button onclick="openCreateGroupModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-3 py-2 rounded-xl font-bold transition-colors shadow-xs" title="Tạo nhóm mới">
+                                    + Nhóm
+                                </button>
                             </div>
 
                             <div class="flex-1 overflow-y-auto p-2 space-y-1">
-                                <div class="text-[10px] font-bold text-emerald-800/60 uppercase tracking-wider px-2 py-1">Kênh Nhóm DevOps</div>
-                                ${roomsHtml}
-                            </div>
+                                ${conversations && conversations.length > 0 ? conversations.map(c => {
+                                    const isGroup = c.type === 'group';
+                                    const name = isGroup ? c.title : (c.direct_user_name || 'Người dùng');
+                                    const avatar = isGroup ? '👥' : (c.direct_user_avatar ? `<img src="${c.direct_user_avatar}" class="w-10 h-10 rounded-full object-cover">` : '👤');
+                                    const subText = c.last_message || (isGroup ? 'Nhóm mới tạo' : c.direct_user_email);
 
-                            <!-- Tạo nhóm mới -->
-                            <div class="p-3 border-t border-emerald-100 bg-emerald-50/40">
-                                <form method="POST" action="/rooms" class="flex gap-1.5">
-                                    <input type="text" name="name" placeholder="+ Tên nhóm mới..." required
-                                        class="flex-1 text-xs px-2.5 py-1.5 bg-white border border-emerald-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500">
-                                    <button type="submit" class="bg-emerald-600 text-white text-xs px-3 py-1.5 rounded-lg font-bold hover:bg-emerald-700 transition-colors">Thêm</button>
-                                </form>
-                            </div>
-                        </div>
-
-                        <!-- 3. RIGHT COLUMN: KHUNG CHAT CHÍNH (NỀN XANH LÁ PASTEL SẠCH SẼ) -->
-                        <div class="flex-1 flex flex-col bg-[#f0fdf4] overflow-hidden">
-                            <!-- Chat Room Header -->
-                            <div class="h-14 bg-white border-b border-emerald-100 px-5 flex items-center justify-between flex-shrink-0 shadow-xs">
-                                <div class="flex items-center gap-3">
-                                    <div class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl font-bold">
-                                        ${currentRoom.avatar || '🌿'}
-                                    </div>
-                                    <div>
-                                        <h3 class="font-bold text-sm text-slate-800">${currentRoom.name}</h3>
-                                        <p class="text-[11px] text-slate-400">${currentRoom.description || 'Kênh trao đổi nhóm'}</p>
-                                    </div>
-                                </div>
-
-                                <div class="flex items-center gap-3 text-xs text-slate-500">
-                                    <span class="bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-md font-mono border border-emerald-200">host: ${os.hostname().slice(0, 8)}</span>
-                                    <span class="hidden md:inline">Thành viên: <b>${members ? members.length : 0}</b></span>
-                                </div>
-                            </div>
-
-                            <!-- Main Body: Message Stream + Right Members Sidebar -->
-                            <div class="flex-1 flex overflow-hidden">
-                                
-                                <!-- Tin nhắn chat -->
-                                <div class="flex-1 flex flex-col overflow-hidden">
-                                    <div id="messages-box" class="flex-1 overflow-y-auto p-4 space-y-1">
-                                        ${messagesHtml.length ? messagesHtml : '<div class="text-center py-10 text-slate-400 text-xs">Chưa có tin nhắn nào trong nhóm. Hãy gửi tin đầu tiên!</div>'}
-                                    </div>
-
-                                    <!-- Thanh nhập tin nhắn -->
-                                    <div class="p-3 bg-white border-t border-emerald-100 flex-shrink-0">
-                                        <!-- Quick Reactions -->
-                                        <div class="flex gap-3 mb-2 text-sm text-slate-400">
-                                            <button onclick="sendQuick('👍')" class="hover:scale-125 transition-transform" title="Like">👍</button>
-                                            <button onclick="sendQuick('🌿')" class="hover:scale-125 transition-transform" title="Green Leaf">🌿</button>
-                                            <button onclick="sendQuick('🚀')" class="hover:scale-125 transition-transform" title="Rocket">🚀</button>
-                                            <button onclick="sendQuick('🔥')" class="hover:scale-125 transition-transform" title="Fire">🔥</button>
+                                    return `
+                                        <div onclick="selectConversation(${c.id}, '${name.replace(/'/g, "\\'")}', '${isGroup ? 'group' : 'direct'}')"
+                                             id="conv-item-${c.id}"
+                                             class="conv-card flex items-center gap-3 p-2.5 rounded-xl cursor-pointer hover:bg-emerald-50/50 transition-colors border-l-4 border-transparent">
+                                            <div class="w-10 h-10 rounded-full bg-emerald-100/70 text-emerald-700 flex items-center justify-center flex-shrink-0 text-lg">
+                                                ${avatar}
+                                            </div>
+                                            <div class="flex-1 min-w-0">
+                                                <div class="flex justify-between items-baseline">
+                                                    <h4 class="text-xs font-bold text-slate-800 truncate">${name}</h4>
+                                                </div>
+                                                <p class="text-[11px] text-slate-400 truncate mt-0.5">${subText}</p>
+                                            </div>
                                         </div>
-
-                                        <form method="POST" action="/messages" class="flex items-center gap-2">
-                                            <input type="hidden" name="room_id" value="${currentRoom.id}">
-                                            <input type="text" id="msg-input" name="content" placeholder="Nhập tin nhắn tới #${currentRoom.name}..." required autocomplete="off"
-                                                class="flex-1 bg-emerald-50/50 text-xs px-4 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white border border-emerald-100 transition-all">
-                                            <button type="submit" 
-                                                class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-5 py-2.5 rounded-xl transition-colors shadow-sm shadow-emerald-600/20">
-                                                Gửi
-                                            </button>
-                                        </form>
+                                    `;
+                                }).join('') : `
+                                    <div class="text-center py-12 px-4 text-slate-400 text-xs space-y-3">
+                                        <p>Chưa có cuộc trò chuyện nào.</p>
+                                        <button onclick="openSearchModal()" class="bg-emerald-100 text-emerald-700 font-bold px-3 py-1.5 rounded-lg hover:bg-emerald-200">
+                                            + Tìm bạn qua Gmail
+                                        </button>
                                     </div>
-                                </div>
-
-                                <!-- Cột phụ: Danh sách thành viên trong nhóm -->
-                                <aside class="w-60 bg-white border-l border-emerald-100 p-3 hidden lg:block overflow-y-auto">
-                                    <h4 class="text-xs font-bold text-emerald-800/70 uppercase tracking-wider mb-3">Thành viên (${members ? members.length : 0})</h4>
-                                    <ul class="space-y-1">
-                                        ${membersHtml}
-                                    </ul>
-                                </aside>
-
+                                `}
                             </div>
                         </div>
 
-                        <script>
-                            // Tự động cuộn xuống tin nhắn cuối cùng khi tải trang
-                            const box = document.getElementById('messages-box');
-                            if (box) {
-                                box.scrollTop = box.scrollHeight;
+                        <!-- Panel: Danh bạ (Contacts) -->
+                        <div id="contacts-panel" class="flex-1 flex flex-col overflow-hidden hidden">
+                            <div class="p-3 border-b border-slate-100 flex justify-between items-center bg-emerald-50/20">
+                                <span class="text-xs font-bold text-emerald-800">Bạn bè (${friends ? friends.length : 0})</span>
+                                <button onclick="openSearchModal()" class="text-xs text-emerald-700 font-semibold hover:underline">+ Thêm bạn</button>
+                            </div>
+
+                            <div class="flex-1 overflow-y-auto p-2 space-y-1">
+                                ${friends && friends.length > 0 ? friends.map(f => `
+                                    <div class="flex items-center justify-between p-2 hover:bg-emerald-50/50 rounded-xl transition-colors">
+                                        <div class="flex items-center gap-2.5 min-w-0">
+                                            <img src="${f.avatar_url}" class="w-9 h-9 rounded-full object-cover">
+                                            <div class="min-w-0">
+                                                <span class="font-bold text-xs text-slate-800 block truncate">${f.full_name}</span>
+                                                <span class="text-[10px] text-slate-400 block truncate">${f.email}</span>
+                                            </div>
+                                        </div>
+                                        <button onclick="startDirectChat(${f.id})" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1 rounded-lg font-medium transition-colors">
+                                            Nhắn tin
+                                        </button>
+                                    </div>
+                                `).join('') : `
+                                    <div class="text-center py-12 px-4 text-slate-400 text-xs space-y-2">
+                                        <p>Bạn chưa kết bạn với ai.</p>
+                                        <button onclick="openSearchModal()" class="text-emerald-600 font-bold hover:underline">
+                                            Tìm bạn bè qua Gmail ngay
+                                        </button>
+                                    </div>
+                                `}
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- 3. RIGHT COLUMN: KHUNG CHAT HOÀN CHỈNH -->
+                    <div class="flex-1 flex flex-col bg-[#f0fdf4] overflow-hidden">
+                        
+                        <!-- Header Chat -->
+                        <div id="chat-header" class="h-14 bg-white border-b border-emerald-100 px-5 flex items-center justify-between flex-shrink-0 shadow-xs">
+                            <div class="flex items-center gap-3">
+                                <div id="chat-header-avatar" class="w-9 h-9 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-base">
+                                    🌿
+                                </div>
+                                <div>
+                                    <h3 id="chat-header-title" class="font-bold text-sm text-slate-800">Chọn cuộc trò chuyện</h3>
+                                    <p id="chat-header-status" class="text-[11px] text-emerald-600 font-medium">Sẵn sàng kết nối</p>
+                                </div>
+                            </div>
+
+                            <div class="text-xs text-slate-400 font-mono">
+                                host: ${os.hostname().slice(0, 8)}
+                            </div>
+                        </div>
+
+                        <!-- Vùng hiển thị tin nhắn -->
+                        <div id="messages-stream" class="flex-1 overflow-y-auto p-4 space-y-2">
+                            <div class="text-center py-20 text-slate-400 text-xs">
+                                Hãy chọn một cuộc trò chuyện ở bên trái hoặc tìm kiếm bạn bè bằng Gmail để bắt đầu nhắn tin.
+                            </div>
+                        </div>
+
+                        <!-- Vùng nhập tin nhắn -->
+                        <div id="chat-input-area" class="p-3 bg-white border-t border-emerald-100 flex-shrink-0 hidden">
+                            <!-- Quick reaction bar -->
+                            <div class="flex gap-3 mb-2 text-sm text-slate-400">
+                                <button onclick="sendQuickEmoji('👍')" class="hover:scale-125 transition-transform" title="Like">👍</button>
+                                <button onclick="sendQuickEmoji('❤️')" class="hover:scale-125 transition-transform" title="Tim">❤️</button>
+                                <button onclick="sendQuickEmoji('🌿')" class="hover:scale-125 transition-transform" title="Lá">🌿</button>
+                                <button onclick="sendQuickEmoji('🔥')" class="hover:scale-125 transition-transform" title="Lửa">🔥</button>
+                                <button onclick="toggleMediaInput()" class="hover:text-emerald-600 text-xs flex items-center gap-1 font-semibold ml-auto" title="Gửi link hình ảnh">
+                                    📷 Gửi ảnh
+                                </button>
+                            </div>
+
+                            <!-- Input link ảnh ẩn/hiện -->
+                            <div id="media-input-box" class="mb-2 hidden">
+                                <input type="url" id="msg-image-url" placeholder="Dán đường dẫn link ảnh (https://...)" 
+                                    class="w-full text-xs px-3 py-1.5 bg-emerald-50/50 border border-emerald-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500">
+                            </div>
+
+                            <form onsubmit="sendMessage(event)" class="flex items-center gap-2">
+                                <input type="text" id="msg-input" placeholder="Nhập tin nhắn..." required autocomplete="off"
+                                    class="flex-1 bg-emerald-50/50 text-xs px-4 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white border border-emerald-100 transition-all">
+                                <button type="submit" 
+                                    class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-5 py-2.5 rounded-xl transition-colors shadow-sm shadow-emerald-600/20">
+                                    Gửi
+                                </button>
+                            </form>
+                        </div>
+
+                    </div>
+
+                    <!-- MODAL: TÌM KIẾM & KẾT BẠN QUA GMAIL -->
+                    <div id="search-modal" class="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 hidden">
+                        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4 border border-emerald-100">
+                            <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                                <h3 class="font-bold text-base text-slate-800">Tìm kiếm bạn bè qua Gmail</h3>
+                                <button onclick="closeSearchModal()" class="text-slate-400 hover:text-slate-700 text-xl font-bold">&times;</button>
+                            </div>
+
+                            <div class="flex gap-2">
+                                <input type="email" id="search-input" placeholder="Nhập Gmail bạn bè (vd: user@gmail.com)..." 
+                                    class="flex-1 text-xs px-3.5 py-2.5 bg-emerald-50/50 border border-emerald-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                                <button onclick="searchUsers()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-2 rounded-xl transition-colors">
+                                    Tìm
+                                </button>
+                            </div>
+
+                            <div id="search-results" class="max-h-60 overflow-y-auto space-y-2 pt-2">
+                                <p class="text-center text-slate-400 text-xs">Nhập địa chỉ Gmail để tìm bạn bè.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- MODAL: TẠO NHÓM CHAT MỚI -->
+                    <div id="group-modal" class="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 hidden">
+                        <div class="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 space-y-4 border border-emerald-100">
+                            <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                                <h3 class="font-bold text-base text-slate-800">Tạo nhóm chat mới</h3>
+                                <button onclick="closeCreateGroupModal()" class="text-slate-400 hover:text-slate-700 text-xl font-bold">&times;</button>
+                            </div>
+
+                            <form method="POST" action="/api/conversations/group" class="space-y-4">
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-600 mb-1">Tên nhóm</label>
+                                    <input type="text" name="title" placeholder="Ví dụ: Nhóm Đồ Án DevOps..." required
+                                        class="w-full text-xs px-3.5 py-2.5 bg-emerald-50/50 border border-emerald-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                                </div>
+                                <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-2.5 rounded-xl transition-colors shadow-sm">
+                                    Tạo nhóm ngay
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- JAVASCRIPT ĐIỀU KHIỂN -->
+                    <script>
+                        var currentUserId = ${req.user.id};
+                        var activeConvId = ${selectedConvId || 0};
+                        var pollTimer = null;
+
+                        function switchTab(tab) {
+                            var chatsPanel = document.getElementById('chats-panel');
+                            var contactsPanel = document.getElementById('contacts-panel');
+                            var btnChats = document.getElementById('rail-chats-btn');
+                            var btnContacts = document.getElementById('rail-contacts-btn');
+
+                            if (tab === 'chats') {
+                                chatsPanel.classList.remove('hidden');
+                                contactsPanel.classList.add('hidden');
+                                btnChats.className = 'w-10 h-10 rounded-xl bg-white/20 text-white flex items-center justify-center text-lg';
+                                btnContacts.className = 'w-10 h-10 rounded-xl hover:bg-white/10 text-white/80 flex items-center justify-center text-lg';
+                            } else {
+                                chatsPanel.classList.add('hidden');
+                                contactsPanel.classList.remove('hidden');
+                                btnContacts.className = 'w-10 h-10 rounded-xl bg-white/20 text-white flex items-center justify-center text-lg';
+                                btnChats.className = 'w-10 h-10 rounded-xl hover:bg-white/10 text-white/80 flex items-center justify-center text-lg';
+                            }
+                        }
+
+                        function openSearchModal() {
+                            document.getElementById('search-modal').classList.remove('hidden');
+                            document.getElementById('search-input').focus();
+                        }
+                        function closeSearchModal() {
+                            document.getElementById('search-modal').classList.add('hidden');
+                        }
+
+                        function openCreateGroupModal() {
+                            document.getElementById('group-modal').classList.remove('hidden');
+                        }
+                        function closeCreateGroupModal() {
+                            document.getElementById('group-modal').classList.add('hidden');
+                        }
+
+                        function searchUsers() {
+                            var q = document.getElementById('search-input').value.trim();
+                            if (!q) return;
+
+                            fetch('/api/search?q=' + encodeURIComponent(q))
+                                .then(function(res) { return res.json(); })
+                                .then(function(users) {
+                                    var container = document.getElementById('search-results');
+                                    if (users.length === 0) {
+                                        container.innerHTML = '<p class="text-center text-slate-400 text-xs py-4">Không tìm thấy tài khoản nào khớp với Gmail này.</p>';
+                                        return;
+                                    }
+
+                                    var html = '';
+                                    for (var i = 0; i < users.length; i++) {
+                                        var u = users[i];
+                                        var friendBtn = !u.is_friend 
+                                            ? '<button onclick="addFriend(' + u.id + ', this)" class="bg-emerald-100 text-emerald-800 font-semibold text-xs px-2.5 py-1 rounded-lg hover:bg-emerald-200">Kết bạn</button>'
+                                            : '<span class="text-[10px] text-emerald-600 font-semibold px-2 py-1">Bạn bè</span>';
+
+                                        html += '<div class="flex items-center justify-between p-2.5 bg-slate-50 rounded-xl border border-slate-100">' +
+                                            '<div class="flex items-center gap-2.5">' +
+                                                '<img src="' + u.avatar_url + '" class="w-9 h-9 rounded-full object-cover">' +
+                                                '<div>' +
+                                                    '<span class="font-bold text-xs text-slate-800 block">' + u.full_name + '</span>' +
+                                                    '<span class="text-[10px] text-slate-400 block">' + u.email + '</span>' +
+                                                '</div>' +
+                                            '</div>' +
+                                            '<div class="flex gap-1.5">' +
+                                                friendBtn +
+                                                '<button onclick="startDirectChat(' + u.id + ')" class="bg-emerald-600 text-white font-semibold text-xs px-2.5 py-1 rounded-lg hover:bg-emerald-700">Nhắn tin</button>' +
+                                            '</div>' +
+                                        '</div>';
+                                    }
+                                    container.innerHTML = html;
+                                });
+                        }
+
+                        function addFriend(friendId, btn) {
+                            btn.disabled = true;
+                            btn.innerText = 'Đang thêm...';
+                            fetch('/api/friends/add', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ friend_id: friendId })
+                            }).then(function(res) {
+                                if (res.ok) {
+                                    btn.className = 'text-[10px] text-emerald-600 font-semibold px-2 py-1';
+                                    btn.innerText = 'Đã kết bạn';
+                                }
+                            });
+                        }
+
+                        function startDirectChat(userId) {
+                            closeSearchModal();
+                            fetch('/api/conversations/direct', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ user_id: userId })
+                            })
+                            .then(function(res) { return res.json(); })
+                            .then(function(data) {
+                                if (data.conversation_id) {
+                                    window.location.href = '/?conv=' + data.conversation_id;
+                                }
+                            });
+                        }
+
+                        function selectConversation(convId, title, type) {
+                            activeConvId = convId;
+                            var cards = document.querySelectorAll('.conv-card');
+                            for (var i = 0; i < cards.length; i++) {
+                                cards[i].classList.remove('bg-emerald-50/80', 'border-emerald-600');
+                                cards[i].classList.add('border-transparent');
+                            }
+                            var activeEl = document.getElementById('conv-item-' + convId);
+                            if (activeEl) {
+                                activeEl.classList.add('bg-emerald-50/80', 'border-emerald-600');
+                                activeEl.classList.remove('border-transparent');
                             }
 
-                            // Gửi nhanh reaction
-                            function sendQuick(emoji) {
-                                document.getElementById('msg-input').value = emoji;
-                                document.getElementById('msg-input').focus();
+                            document.getElementById('chat-header-title').innerText = title;
+                            document.getElementById('chat-header-status').innerText = type === 'group' ? 'Nhóm trò chuyện' : 'Trực tuyến';
+                            document.getElementById('chat-header-avatar').innerText = type === 'group' ? '👥' : '👤';
+                            document.getElementById('chat-input-area').classList.remove('hidden');
+
+                            loadMessages();
+                            if (pollTimer) clearInterval(pollTimer);
+                            pollTimer = setInterval(loadMessages, 2000);
+                        }
+
+                        function loadMessages() {
+                            if (!activeConvId) return;
+                            fetch('/api/messages?conversation_id=' + activeConvId)
+                                .then(function(res) { return res.json(); })
+                                .then(function(messages) {
+                                    var container = document.getElementById('messages-stream');
+                                    if (messages.length === 0) {
+                                        container.innerHTML = '<div class="text-center py-16 text-slate-400 text-xs">Chưa có tin nhắn nào. Hãy gửi lời chào đầu tiên!</div>';
+                                        return;
+                                    }
+
+                                    var isAtBottom = container.scrollHeight - container.scrollTop <= container.clientHeight + 100;
+                                    var html = '';
+
+                                    for (var i = 0; i < messages.length; i++) {
+                                        var m = messages[i];
+                                        var isMe = m.sender_id === currentUserId;
+                                        var time = new Date(m.created_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+                                        var imageTag = m.image_url ? '<img src="' + m.image_url + '" class="rounded-xl mt-1.5 max-h-60 object-cover cursor-pointer" onclick="window.open(\'' + m.image_url + '\')">' : '';
+
+                                        if (isMe) {
+                                            html += '<div class="flex justify-end gap-2 my-1.5 group">' +
+                                                '<button onclick="deleteMsg(' + m.id + ')" class="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-rose-500 text-xs self-center" title="Xóa tin nhắn">🗑️</button>' +
+                                                '<div class="max-w-[70%] text-right">' +
+                                                    '<div class="bg-emerald-600 text-white text-xs px-4 py-2.5 rounded-2xl rounded-tr-none shadow-xs text-left inline-block">' +
+                                                        (m.content ? '<span>' + m.content + '</span>' : '') +
+                                                        imageTag +
+                                                    '</div>' +
+                                                    '<span class="text-[10px] text-emerald-800/60 block mt-0.5">' + time + '</span>' +
+                                                '</div>' +
+                                            '</div>';
+                                        } else {
+                                            html += '<div class="flex items-start gap-2.5 my-1.5">' +
+                                                '<img src="' + m.sender_avatar + '" class="w-8 h-8 rounded-full object-cover flex-shrink-0 mt-0.5">' +
+                                                '<div class="max-w-[70%]">' +
+                                                    '<span class="text-[11px] font-semibold text-slate-700 block mb-0.5">' + m.sender_name + '</span>' +
+                                                    '<div class="bg-white border border-emerald-100 text-slate-800 text-xs px-4 py-2.5 rounded-2xl rounded-tl-none shadow-xs inline-block">' +
+                                                        (m.content ? '<span>' + m.content + '</span>' : '') +
+                                                        imageTag +
+                                                    '</div>' +
+                                                    '<span class="text-[10px] text-slate-400 block mt-0.5">' + time + '</span>' +
+                                                '</div>' +
+                                            '</div>';
+                                        }
+                                    }
+
+                                    container.innerHTML = html;
+                                    if (isAtBottom) {
+                                        container.scrollTop = container.scrollHeight;
+                                    }
+                                });
+                        }
+
+                        function sendMessage(e) {
+                            e.preventDefault();
+                            var input = document.getElementById('msg-input');
+                            var imgInput = document.getElementById('msg-image-url');
+                            var content = input.value.trim();
+                            var image_url = imgInput ? imgInput.value.trim() : '';
+
+                            if (!content && !image_url) return;
+
+                            input.value = '';
+                            if (imgInput) imgInput.value = '';
+                            document.getElementById('media-input-box').classList.add('hidden');
+
+                            fetch('/api/messages', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    conversation_id: activeConvId,
+                                    content: content,
+                                    image_url: image_url
+                                })
+                            }).then(function() {
+                                loadMessages();
+                            });
+                        }
+
+                        function deleteMsg(id) {
+                            if (!confirm('Bạn có muốn xóa tin nhắn này?')) return;
+                            fetch('/api/messages/delete', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ message_id: id })
+                            }).then(function() {
+                                loadMessages();
+                            });
+                        }
+
+                        function sendQuickEmoji(emoji) {
+                            var input = document.getElementById('msg-input');
+                            input.value = emoji;
+                            input.focus();
+                        }
+
+                        function toggleMediaInput() {
+                            var box = document.getElementById('media-input-box');
+                            box.classList.toggle('hidden');
+                        }
+
+                        window.onload = function() {
+                            if (activeConvId) {
+                                var card = document.getElementById('conv-item-' + activeConvId);
+                                if (card) card.click();
                             }
-                        </script>
-                    </body>
-                    </html>
-                `);
-            });
+                        };
+                    </script>
+                </body>
+                </html>
+            `);
         });
     });
 });
 
-// Gửi tin nhắn mới
-app.post('/messages', (req, res) => {
-    if (!req.user) return res.redirect('/login');
-    const { room_id, content } = req.body;
-    db.query(
-        'INSERT INTO messages (room_id, user_id, content) VALUES (?, ?, ?)',
-        [room_id, req.user.id, content],
-        () => res.redirect(`/?room=${room_id}`)
-    );
-});
-
-// Tạo nhóm chat mới
-app.post('/rooms', (req, res) => {
-    if (!req.user) return res.redirect('/login');
-    const { name } = req.body;
-    db.query(
-        'INSERT INTO rooms (name, description, avatar) VALUES (?, ?, ?)',
-        [name, 'Nhóm tạo bởi ' + req.user.full_name, '🌿'],
-        (err, result) => {
-            res.redirect(`/?room=${result.insertId}`);
-        }
-    );
-});
-
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`GreenChat App running on port ${PORT}`));
+app.listen(PORT, () => console.log(`GreenChat full features running on port ${PORT}`));
