@@ -79,7 +79,7 @@ Hệ thống triển khai một ứng dụng Chat nhóm nội bộ mang tên **G
 
 Để tối ưu tiến độ và trách nhiệm rõ ràng, dự án được chia thành 2 phần độc lập:
 
-| Thành phần | Người phụ trách | Nhiệm vụ chính | Sản phẩm bàn giao |
+| Thành phần  | Nhiệm vụ chính | Sản phẩm bàn giao |
 | :--- | :--- | :--- | :--- |
 | **PHẦN 1: Ứng dụng & Docker Stack**  | • Thiết kế ứng dụng GreenChat (Node.js Express + Tailwind CSS, đăng ký/đăng nhập bằng Gmail).<br>• Tạo Database MySQL với bảng `users`, `friendships`, `conversations`, `conversation_members`, `messages`.<br>• Cấu hình Nginx Reverse Proxy (Port 80) phân luồng sang App.<br>• Đóng gói toàn bộ hệ thống với `Dockerfile` và `docker-compose.yml`. | Hệ thống chạy trơn tru cục bộ trên Ubuntu qua lệnh `docker compose up -d`, truy cập được tại `http://localhost` và mạng LAN `http://172.26.92.9`. |
 | **PHẦN 2: Tự động hóa CI/CD & Mạng Ubuntu**  | • Cài đặt Jenkins Server chạy bằng Docker (mount Docker socket trên Ubuntu).<br>• Kiểm thử đa người dùng qua mạng nội bộ Ubuntu (kết bạn & chat giữa 2 tài khoản).<br>• Viết `Jenkinsfile` chuẩn Declarative Pipeline (Build, Push Docker Hub, Deploy).<br>• Cấu hình GitHub Webhook để tự động build & deploy khi có commit mới. | Pipeline tự động hóa CI/CD từ A-Z, hỗ trợ tương tác trực tiếp giữa các thành viên qua mạng Ubuntu. |
