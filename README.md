@@ -245,17 +245,74 @@ docker compose ps
 * `devops_app`: Up (Port `3000/tcp`)
 * `devops_mysql`: Up (healthy)
 
-### 6.3. Truy cập ứng dụng & Tương tác nhiều thành viên
+### 6.3. Truy cập ứng dụng
 * **Trên máy Ubuntu chính (Host):** `http://localhost`
-* **Trên máy Ubuntu thành viên khác (cùng mạng LAN/Wi-Fi):** `http://172.26.92.9`
-* Đăng nhập 2 tài khoản: `dang.2006.qt@gmail.com` và `nhan@gmail.com` để thử nghiệm tương tác gửi tin nhắn và kết bạn hai chiều.
+* **Trên máy Ubuntu thành viên khác (cùng mạng LAN/Wi-Fi):** `http://<UBUNTU_LAN_IP>` (Ví dụ: `http://192.168.1.199`)
 
 ---
 
-## 7. KỊCH BẢN DEMO BẢO VỆ ĐỒ ÁN TRƯỚC HỘI ĐỒNG
+## 7. BA KỊCH BẢN TƯƠNG TÁC THỰC TẾ GIỮA CÁC THÀNH VIÊN
+
+Phần này chứng minh tính ứng dụng thực tế và khả năng làm việc nhóm trên môi trường Ubuntu và Docker:
+
+### KỊCH BẢN 1: Máy Ubuntu làm Server — Thành viên khác kết nối vào dùng (Client & Testing)
+* **Ý nghĩa:** Máy Ubuntu của Thành viên A đóng vai trò là **Production Server**. Ứng dụng GreenChat, Nginx và MySQL đang chạy nền bằng Docker trên máy A. Thành viên B (dùng máy tính khác hoặc điện thoại) kết nối vào để trải nghiệm và kiểm thử.
+* **Cách thực hiện:**
+  * **Cùng mạng Wi-Fi / LAN:** Thành viên B mở trình duyệt trên máy của họ, nhập địa chỉ IP mạng nội bộ của máy Ubuntu:
+    ```text
+    http://<UBUNTU_LAN_IP>    (Ví dụ: http://192.168.1.199)
+    ```
+  * **Khác mạng Wi-Fi (Ngồi ở nhà qua Internet):** Thành viên A chạy lệnh tạo Public Tunnel an toàn (miễn phí):
+    ```bash
+    npx --yes localtunnel --port 80
+    ```
+    Hệ thống sinh ra đường link công khai dạng `https://greenchat-xxx.loca.lt`. Thành viên B click vào là truy cập thẳng vào GreenChat từ bất kỳ đâu.
+* **Kịch bản tương tác giữa 2 thành viên:**
+  1. Thành viên A (`dang.2006.qt@gmail.com`) đăng nhập trên máy chủ.
+  2. Thành viên B (`nhan@gmail.com`) đăng nhập trên máy client.
+  3. Thành viên A vào tab **`👥 Bạn bè`**, tìm kiếm `nhan@gmail.com` và bấm **`➕ Kết bạn`**.
+  4. Hai thành viên nhắn tin qua lại thời gian thực (real-time) và bấm **`+ Tạo nhóm`** để lập nhóm chat đồ án DevOps.
+
+---
+
+### KỊCH BẢN 2: Thành viên khác kéo mã nguồn về và tự chạy trên máy họ (Developer Replication)
+* **Ý nghĩa:** Giải quyết bài toán kinh điển trong phát triển phần mềm: *"Nó chạy được trên máy tôi nhưng sang máy bạn thì lỗi"*.
+* **Nguyên lý Docker ("Write Once, Run Anywhere"):** Thành viên B **không cần** cài đặt Node.js, không cần cài MySQL Server hay Nginx trên máy họ. Chỉ cần máy có Docker là chạy được 100% giống hệt máy Thành viên A.
+* **Các bước Thành viên B thực hiện:**
+  ```bash
+  # 1. Clone toàn bộ dự án từ GitHub về máy
+  git clone https://github.com/tussstudyit/devops-services-docker-ubuntu.git
+  cd devops-services-docker-ubuntu
+
+  # 2. Khởi chạy toàn bộ hệ thống bằng 1 lệnh duy nhất
+  docker compose up -d --build
+  ```
+* **Kết quả:** Sau 1 phút, Thành viên B mở `http://localhost` trên máy họ là có ngay một môi trường GreenChat hoạt động hoàn hảo.
+
+---
+
+### KỊCH BẢN 3: Phối hợp DevOps & Tự động hóa CI/CD khi cùng tham gia phát triển
+* **Ý nghĩa:** Quy trình làm việc nhóm chuẩn công nghiệp DevOps:
+  1. Thành viên B mở mã nguồn trên máy họ, chỉnh sửa tính năng hoặc giao diện.
+  2. Thành viên B commit và push lên GitHub:
+     ```bash
+     git add .
+     git commit -m "feat: enhance chat interface from member B"
+     git push origin main
+     ```
+  3. GitHub gửi Webhook kích hoạt Jenkins Pipeline trên Ubuntu Server:
+     * Jenkins tự động kéo mã nguồn mới (`Checkout`).
+     * Tự động đóng gói Docker Image mới (`Docker Build`).
+     * Tự động đẩy lên Docker Hub (`Docker Push`).
+     * Tự động cập nhật container `devops_app` trên Ubuntu Server (`Deploy`).
+  4. Ứng dụng tự động cập nhật phiên bản mới nhất mà không cần quản trị viên can thiệp thủ công bằng tay.
+
+---
+
+## 8. KỊCH BẢN DEMO BẢO VỆ ĐỒ ÁN TRƯỚC HỘI ĐỒNG
 
 1. **Chứng minh kiến trúc Docker & Phân tách dịch vụ:**
-   * Mở trình duyệt `http://localhost` và `http://172.26.92.9` xem giao diện GreenChat.
+   * Mở trình duyệt xem giao diện GreenChat tại `http://localhost` hoặc IP mạng LAN `http://192.168.1.199`.
    * Gửi tin nhắn giữa hai tài khoản qua mạng nội bộ Ubuntu (chứng minh Nginx Reverse Proxy và Node.js hoạt động).
    * Chạy lệnh `docker compose restart app` -> F5 lại web: Toàn bộ tin nhắn và tài khoản vẫn còn nguyên (chứng minh Named Volume `mysql_data` hoạt động bảo toàn dữ liệu).
 2. **Chứng minh tự động hóa CI/CD:**
@@ -265,6 +322,6 @@ docker compose ps
      git commit -am "release: bump version to v2.0.0"
      git push origin main
      ```
-   * Chuyển sang màn hình Jenkins: Xem pipeline tự động kích hoạt qua 4 stages.
+   * Chuyển sang màn hình Jenkins: Xem pipeline tự động kích hoạt qua các stages.
    * Chuyển sang Docker Hub: Thấy image mới vừa được đẩy lên.
    * Quay lại `http://localhost` và nhấn F5: Web đã tự động nhảy lên phiên bản **v2.0.0** mà các tài khoản và lịch sử chat trước đó không hề bị mất.
