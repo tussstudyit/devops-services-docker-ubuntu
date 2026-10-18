@@ -1,9 +1,16 @@
 pipeline {
     agent any
 
+    options {
+        // Chi checkout mot lan tai stage Checkout Code.
+        skipDefaultCheckout(true)
+
+        // Tranh hai lan build/deploy chay cung luc.
+        disableConcurrentBuilds()
+    }
+
     environment {
-        // Cấu hình thông tin Docker Hub
-        DOCKER_HUB_REPO = 'tussstudyit/greenchat-app'
+        DOCKER_HUB_REPO = 'iragad/greenchat-app'
         IMAGE_TAG = "${env.BUILD_NUMBER}"
         DOCKER_CREDENTIALS_ID = 'docker-hub-credentials'
     }
@@ -16,44 +23,58 @@ pipeline {
             }
         }
 
-        stage('2. Lint & Verify') {
+        stage('2. Verify Configuration') {
             steps {
-                echo 'Checking codebase files...'
-                sh 'ls -la'
+                // Kiem tra file va cau hinh, chua phai unit test.
                 sh 'test -f app/Dockerfile'
                 sh 'test -f docker-compose.yml'
+                sh 'docker compose -p greenchat-nhom config --quiet'
             }
         }
 
         stage('3. Build Docker Image') {
             steps {
-                script {
-                    echo "Building Docker Image: ${DOCKER_HUB_REPO}:${IMAGE_TAG}"
-                    sh "docker build -t ${DOCKER_HUB_REPO}:${IMAGE_TAG} -t ${DOCKER_HUB_REPO}:latest ./app"
-                }
+                echo "Building image: ${DOCKER_HUB_REPO}:${IMAGE_TAG}"
+
+                sh '''
+                    docker build \
+                        -t "$DOCKER_HUB_REPO:$IMAGE_TAG" \
+                        -t "$DOCKER_HUB_REPO:latest" \
+                        ./app
+                '''
             }
         }
 
         stage('4. Push to Docker Hub') {
             steps {
-                script {
-                    echo "Pushing image to Docker Hub..."
-                    withCredentials([usernamePassword(credentialsId: "${DOCKER_CREDENTIALS_ID}", usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-                        sh "echo \${DOCKER_PASS} | docker login -u \${DOCKER_USER} --password-stdin"
-                        sh "docker push ${DOCKER_HUB_REPO}:${IMAGE_TAG}"
-                        sh "docker push ${DOCKER_HUB_REPO}:latest"
-                    }
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: env.DOCKER_CREDENTIALS_ID,
+                        usernameVariable: 'DOCKER_USER',
+                        passwordVariable: 'DOCKER_PASS'
+                    )
+                ]) {
+                    sh '''
+                        set +x
+                        printf "%s" "$DOCKER_PASS" |
+                            docker login -u "$DOCKER_USER" --password-stdin
+                    '''
+
+                    sh 'docker push "$DOCKER_HUB_REPO:$IMAGE_TAG"'
+                    sh 'docker push "$DOCKER_HUB_REPO:latest"'
                 }
             }
         }
 
         stage('5. Deploy Production') {
             steps {
-                script {
-                    echo 'Deploying application stack on Ubuntu Server...'
-                    sh 'docker compose pull app'
-                    sh 'docker compose up -d --no-deps app'
-                }
+                echo 'Updating GreenChat application on Ubuntu...'
+
+                // Dung dung project da khoi tao tren Ubuntu.
+                sh 'docker compose -p greenchat-nhom pull app'
+
+                // Chi cap nhat App, khong tao lai MySQL va Nginx.
+                sh 'docker compose -p greenchat-nhom up -d --no-deps --no-build app'
             }
         }
     }
@@ -62,11 +83,13 @@ pipeline {
         always {
             sh 'docker logout || true'
         }
+
         success {
-            echo 'Pipeline executed successfully! Application is live.'
+            echo 'Build, push and container update completed. Verify GreenChat in the browser.'
         }
+
         failure {
-            echo 'Pipeline failed. Please check build logs.'
+            echo 'Pipeline failed. Check Console Output.'
         }
     }
 }
